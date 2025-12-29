@@ -39,7 +39,7 @@ if (!process.env.API_KEY) {
   console.error('WARNING: API_KEY environment variable is not set!');
 }
 const genAI = process.env.API_KEY ? new GoogleGenerativeAI(process.env.API_KEY) : null;
-const model = genAI ? genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" }) : null;
+const model = genAI ? genAI.getGenerativeModel({ model: "gemini-2.5-flash" }) : null;
 
 const generate = async (prompt) => {
   try {
