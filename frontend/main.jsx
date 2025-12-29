@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import ReactMarkdown from 'react-markdown'
 import './style.css'
 
-const API_URL = 'http://localhost:3000/api/content'
+const API_URL = import.meta.env.VITE_API_URL || 'https://naa-ai-backend.onrender.com/api/content'
 
 function App() {
   const [messages, setMessages] = useState([])

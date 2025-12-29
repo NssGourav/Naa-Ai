@@ -7,7 +7,19 @@ const app = express()
 
 // CORS middleware
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:5173')
+  const origin = req.headers.origin
+
+  if (process.env.NODE_ENV === 'production' || !origin) {
+    res.header('Access-Control-Allow-Origin', '*')
+  } else {
+    const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000']
+    if (allowedOrigins.includes(origin)) {
+      res.header('Access-Control-Allow-Origin', origin)
+    } else {
+      res.header('Access-Control-Allow-Origin', '*')
+    }
+  }
+  
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   res.header('Access-Control-Allow-Headers', 'Content-Type')
   if (req.method === 'OPTIONS') {
