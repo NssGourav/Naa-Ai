@@ -4,6 +4,18 @@ import express from "express";
 import bodyParser from "body-parser";
 dotenv.config({ quiet: true });
 const app = express()
+
+// CORS middleware
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'http://localhost:5173')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'Content-Type')
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200)
+  }
+  next()
+})
+
 app.use(express.json())
 app.use(bodyParser.json())
 
