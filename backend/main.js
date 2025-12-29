@@ -40,28 +40,54 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 const generate = async (prompt) => {
   try {
+    if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+      throw new Error('Prompt is required and must be a non-empty string');
+    }
+    
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    console.log(result.response.text());
-    return result.response.text();
+    const text = result.response.text();
+    console.log('Generated response:', text);
+    return text;
   } catch (err) {
-    console.log(err);
+    console.error('Error generating content:', err);
+    throw err; 
   }
 };
 
 app.post('/api/content', async (req, res) => {
   try {
-    const data = req.body.question;
-    const result = await generate(data);
+    if (!req.body || !req.body.question) {
+      return res.status(400).send({ "error": "Question is required" });
+    }
+
+    const question = req.body.question.trim();
+    if (question.length === 0) {
+      return res.status(400).send({ "error": "Question cannot be empty" });
+    }
+    if (!process.env.API_KEY) {
+      console.error('API_KEY is not configured');
+      return res.status(500).send({ "error": "Server configuration error" });
+    }
+
+    const result = await generate(question);
+    
+    if (!result) {
+      return res.status(500).send({ "error": "Failed to generate response" });
+    }
+
     res.send({ "result": result });
   } catch (err) {
-    console.log(err);
-    res.status(500).send({ "error": "Internal server error" });
+    console.error('Error in /api/content:', err);
+    const errorMessage = err.message || "Internal server error";
+    res.status(500).send({ "error": errorMessage });
   }
 });
 
-app.listen(3000,()=>{
-    console.log("Server is ON running on port 3000");
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+    console.log(`Server is ON running on port ${PORT}`);
 });
 
 

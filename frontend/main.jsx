@@ -25,6 +25,10 @@ function App() {
         body: JSON.stringify({ question }),
       })
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
       const data = await response.json()
       
       if (data.result) {
@@ -34,9 +38,10 @@ function App() {
       }
     } catch (error) {
       setMessages(prev => [...prev, { 
-        text: 'Error: Could not connect to server. Make sure backend is running on port 3000.', 
+        text: 'Error: Could not connect to server. Please check your connection and try again.', 
         isUser: false 
       }])
+      console.error('Error sending message:', error)
     } finally {
       setLoading(false)
     }
