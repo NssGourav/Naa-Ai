@@ -5,7 +5,6 @@ import express from "express";
 dotenv.config();
 const app = express();
 app.use(express.json())
-//cors
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -42,7 +41,7 @@ app.post("/api/content", async (req, res) => {
 
     const msg = err.message || "";
 
-    if (msg.includes("quota") || msg.includes("RESOURCE_EXHAUSTED") || msg.includes("429")){
+    if (msg.includes("quota") || msg.includes("RESOURCE_EXHAUSTED") || msg.includes("429")) {
       return res.status(429).json({
         error: "AI quota exceeded. Please try again later."
       });
