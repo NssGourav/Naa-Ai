@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 set -o errexit
 
-# Ensure we are in the script's directory
-cd "$(dirname "$0")"
+# Get the directory where the script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-pip install -r requirements.txt
+echo "Current working directory: $(pwd)"
+echo "Script directory: $SCRIPT_DIR"
+echo "List files in script directory:"
+ls -la "$SCRIPT_DIR"
+
+pip install -r "$SCRIPT_DIR/requirements.txt"
 python -m spacy download en_core_web_sm
