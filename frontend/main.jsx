@@ -1,89 +1,152 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import ReactMarkdown from 'react-markdown'
 import './style.css'
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://naa-ai-backend.onrender.com/api/content'
+const API_BASE = 'http://localhost:8000/api'
 
 function App() {
-  const [messages, setMessages] = useState([])
-  const [input, setInput] = useState('')
+  const [lectureData, setLectureData] = useState(null)
+  const [activeTab, setActiveTab] = useState('summary')
   const [loading, setLoading] = useState(false)
+  const [pdfUrl, setPdfUrl] = useState(null)
 
-  const sendMessage = async () => {
-    const question = input.trim()
-    if (!question || loading) return
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
 
-    setMessages(prev => [...prev, { text: question, isUser: true }])
-    setInput('')
     setLoading(true)
+    setPdfUrl(URL.createObjectURL(file))
+
+    const formData = new FormData()
+    formData.append('file', file)
 
     try {
-      const response = await fetch(API_URL, {
+      const response = await fetch(`${API_BASE}/ingest`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question }),
+        body: formData
       })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
       const data = await response.json()
-      
-      if (data.result) {
-        setMessages(prev => [...prev, { text: data.result, isUser: false }])
-      } else if (data.error) {
-        setMessages(prev => [...prev, { text: `Error: ${data.error}`, isUser: false }])
+      if (data.lecture_id) {
+        fetchLectureData(data.lecture_id)
       }
-    } catch (error) {
-      setMessages(prev => [...prev, { 
-        text: 'Error: Could not connect to server. Please check your connection and try again.', 
-        isUser: false 
-      }])
-      console.error('Error sending message:', error)
+    } catch (err) {
+      console.error("Upload failed", err)
+      setLoading(false)
+    }
+  }
+
+  const fetchLectureData = async (id) => {
+    try {
+      const response = await fetch(`${API_BASE}/lecture/${id}`)
+      const data = await response.json()
+      setLectureData(data)
+    } catch (err) {
+      console.error("Fetch failed", err)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      sendMessage()
+
+  useEffect(() => {
+    const notesContainer = document.querySelector('.notes-view')
+    if (notesContainer) {
+      notesContainer.scrollTop = 0
     }
-  }
+  }, [lectureData, activeTab])
 
   return (
-    <div className="container">
-      <h1>Naa AI - Prompt Responder</h1>
-      <div className="chat-container">
-        <div className="messages">
-          {messages.map((msg, idx) => (
-            <div key={idx} className={`message ${msg.isUser ? 'user' : 'ai'}`}>
-              {msg.isUser ? (
-                msg.text
-              ) : (
-                <ReactMarkdown>{msg.text}</ReactMarkdown>
-              )}
+    <div className="app-container">
+      <div className="pdf-viewer">
+        {pdfUrl ? (
+          <iframe src={pdfUrl} title="Lecture PDF" />
+        ) : (
+          <div className="upload-box" onClick={() => document.getElementById('fileInput').click()}>
+            <p>📁 Click to upload NS  T Lecture PDF</p>
+            <input
+              id="fileInput"
+              type="file"
+              accept=".pdf"
+              hidden
+              onChange={handleFileUpload}
+            />
+          </div>
+        )}
+
+        {loading && (
+          <div className="upload-overlay">
+            <div className="loader">Analyzing Lecture Patterns...</div>
+          </div>
+        )}
+      </div>
+
+
+      <div className="analysis-panel">
+        <div className="panel-header">
+          <h1>{lectureData ? lectureData.title : 'Lecture Intelligence'}</h1>
+          {lectureData && <span className="badge">Analyzed</span>}
+        </div>
+
+        {lectureData ? (
+          <>
+            <div className="tabs">
+              {['summary', 'notes'].map(tab => (
+                <div
+                  key={tab}
+                  className={`tab ${activeTab === tab ? 'active' : ''}`}
+                  onClick={() => setActiveTab(tab)}
+                >
+                  {tab.toUpperCase()}
+                </div>
+              ))}
             </div>
-          ))}
-          {loading && (
-            <div className="message ai loading">Thinking...</div>
-          )}
-        </div>
-        <div className="input-container">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Ask me anything..."
-            disabled={loading}
-          />
-          <button onClick={sendMessage} disabled={loading}>
-            Send
-          </button>
-        </div>
+
+            <div className="tab-content fade-in">
+              {activeTab === 'summary' && (
+                <div className="summary-view">
+                  {lectureData.summary.map((s, i) => (
+                    <div key={i} className="summary-item">{s}</div>
+                  ))}
+                  <div className="keywords-box">
+                    <h3>Focus Keywords</h3>
+                    <div className="keyword-tags">
+                      {lectureData.keywords.map(kw => <span key={kw} className="tag">{kw}</span>)}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'notes' && (
+                <div className="notes-view">
+                  {lectureData.notes.map((n, i) => (
+                    <div key={i} className="note-card">
+                      <h3>Page {n.page}</h3>
+                      <div className="note-groups">
+                        {Array.from(new Set(n.content.map(p => p.heading))).map(heading => (
+                          <div key={heading} className="note-group">
+                            <h4>{heading}</h4>
+                            <ul>
+                              {n.content.filter(p => p.heading === heading).map((p, j) => (
+                                <li key={j}>{p.point}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+
+            </div>
+          </>
+        ) : (
+          <div className="empty-state">
+            <p>Upload a lecture to start the transformation</p>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -91,4 +154,3 @@ function App() {
 
 const root = createRoot(document.getElementById('app'))
 root.render(<App />)
-
