@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pdfplumber
+nltk
+scikit-learn
+python-multipart
+# For TextRank
+pytextrank
+spacy
