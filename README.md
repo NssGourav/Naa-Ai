@@ -1,7 +1,7 @@
 <p align="center">
   <h1 align="center">📚 Naa-Ai</h1>
   <p align="center">
-    <strong>Intelligent Lecture Assistant — Turn PDFs into Study Superpowers</strong>
+    <strong>Intelligent Lecture Assistant  Turn PDFs into Study Superpowers</strong>
   </p>
   <p align="center">
     <a href="#-getting-started">Quick Start</a> •
@@ -15,7 +15,7 @@
 
 ---
 
-> Upload a lecture PDF, and Naa-Ai instantly generates structured notes, AI-powered summaries, focus keywords, and helpful links — all inside a beautiful split-screen dashboard.
+> Upload a lecture PDF, and Naa Ai instantly generates structured notes, AI-powered summaries, focus keywords, and helpful links  all inside a beautiful split screen dashboard.
 
 ## ✨ Features
 
@@ -96,7 +96,7 @@
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/` | Health check |
-| `POST` | `/api/ingest` | Upload a PDF — returns `lecture_id` and `title` |
+| `POST` | `/api/ingest` | Upload a PDF  returns `lecture_id` and `title` |
 | `GET` | `/api/lecture/:id` | Retrieve processed lecture data (summary, keywords, notes) |
 | `GET` | `/api/lectures` | List all processed lectures |
 
