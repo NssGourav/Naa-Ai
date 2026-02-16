@@ -49,8 +49,8 @@
 ### Infrastructure
 | Layer | Tool |
 |-------|------|
-| Frontend Hosting | [Vercel](https://vercel.com) |
-| Backend Hosting | [Render](https://render.com) |
+| Frontend Hosting | [Vercel]([https://vercel.com](https://naa-ai-itic.vercel.app/)) |
+| Backend Hosting | [Render]([https://render.com](https://na-ai-backend.onrender.com)) |
 | Build Script | `build.sh` (spaCy model download + Gunicorn) |
 
 ## 🏗️ Architecture
