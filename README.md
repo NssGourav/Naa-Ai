@@ -1,164 +1,191 @@
-# Naa AI - Prompt Responder
+<p align="center">
+  <h1 align="center">📚 Naa-Ai</h1>
+  <p align="center">
+    <strong>Intelligent Lecture Assistant — Turn PDFs into Study Superpowers</strong>
+  </p>
+  <p align="center">
+    <a href="#-getting-started">Quick Start</a> •
+    <a href="#-features">Features</a> •
+    <a href="#-tech-stack">Tech Stack</a> •
+    <a href="#-architecture">Architecture</a> •
+    <a href="#-api-reference">API</a> •
+    <a href="#-deployment">Deploy</a>
+  </p>
+</p>
 
-An AI powered chat application that uses Google's Gemini AI to respond to user prompts. The application features a modern React frontend and an Express.js backend.
+---
 
-## 🚀 Features
+> Upload a lecture PDF, and Naa-Ai instantly generates structured notes, AI-powered summaries, focus keywords, and helpful links — all inside a beautiful split-screen dashboard.
 
-- Interactive chat interface with markdown support
-- Powered by Google Gemini 2.5 Flash model
-- Real time AI responses
-- Modern and responsive UI
-- Deployed on Vercel (frontend) and Render (backend)
+## ✨ Features
+
+| Feature | Description |
+|---------|-------------|
+| 📄 **Smart PDF Ingestion** | Extracts text with `pdfplumber`, auto-detects headings, strips headers/footers, and cleans noise |
+| 🧠 **AI Summarization** | Graph-based extractive summaries via `PyTextRank`, with auto-detected helpful links |
+| 🔑 **TF-IDF Keyword Extraction** | Identifies the top focus keywords using `scikit-learn` unigram/bigram analysis |
+| 📝 **Exam-Ready Notes** | Auto-generates per-page revision notes — detects bullets, definitions, and key sentences |
+| 🔀 **Resizable Split-Screen UI** | Drag-to-resize PDF viewer + analysis panel for side-by-side studying |
+| 🎨 **Dark Mode Dashboard** | GitHub-inspired dark theme with glassmorphism, smooth animations, and custom scrollbars |
 
 ## 🛠️ Tech Stack
 
 ### Frontend
-- **React 18** - UI library
-- **Vite** - Build tool and dev server
-- **React Markdown** - Markdown rendering for AI responses
+- **React 18** with Vite for instant HMR dev server
+- **React Markdown** for rendering rich summaries
+- **Vanilla CSS** — custom design system using CSS variables, `Inter` + `Outfit` fonts
 
-### Backend
-- **Node.js** - Runtime environment
-- **Express.js** - Web framework
-- **Google Generative AI** - AI model integration
-- **CORS** - Cross-origin resource sharing
+### Backend — Python (Primary)
+- **FastAPI** — high-performance async API with automatic OpenAPI docs
+- **spaCy** (`en_core_web_sm`) — NLP pipeline for sentence segmentation and entity recognition
+- **PyTextRank** — graph-based extractive summarization
+- **scikit-learn** — TF-IDF vectorization for keyword extraction
+- **pdfplumber** — robust PDF text extraction
 
-## 📋 Prerequisites
+### Backend — Node.js (Legacy)
+- **Express 5** — REST API server
+- **Google Generative AI SDK** — Gemini 2.5 Flash integration for generative Q&A
 
-- Node.js (v16 or higher)
-- npm or yarn
-- Google Gemini API key
+### Infrastructure
+| Layer | Tool |
+|-------|------|
+| Frontend Hosting | [Vercel](https://vercel.com) |
+| Backend Hosting | [Render](https://render.com) |
+| Build Script | `build.sh` (spaCy model download + Gunicorn) |
 
-## 🔧 Installation
+## 🏗️ Architecture
 
-### Backend Setup
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        React Frontend (Vite)                    │
+│  ┌──────────────────┐  ┌──────────────────────────────────────┐ │
+│  │  PDF Viewer       │  │  Analysis Panel                     │ │
+│  │  (iframe)         │  │  ┌──────────┐ ┌──────────────────┐  │ │
+│  │                   │◄─┤  │  Notes    │ │  Summary +       │  │ │
+│  │                   │  │  │  Tab      │ │  Keywords Tab    │  │ │
+│  └──────────────────┘  └──┴──────────┴─┴──────────────────┘──┘ │
+│         ▲ Resizable Divider                                     │
+└─────────────────────────────┬───────────────────────────────────┘
+                              │ REST API
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     FastAPI Backend (Python)                     │
+│                                                                 │
+│  ┌────────────┐  ┌──────────────┐  ┌─────────────────────────┐ │
+│  │ Ingestion   │  │ NLP Pipeline  │  │ Storage Layer           │ │
+│  │ /api/ingest │─▶│ extract →     │─▶│ MD5-hashed JSON cache   │ │
+│  │             │  │ summarize →   │  │ data/<hash>.json        │ │
+│  │             │  │ keywords →    │  │                         │ │
+│  │             │  │ notes         │  │                         │ │
+│  └────────────┘  └──────────────┘  └─────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-1. Navigate to the backend directory:
+### Processing Pipeline
+
+1. **Ingestion** — PDF uploaded → text extracted page-by-page via `pdfplumber`
+2. **Cleaning** — Headers, footers, and noise patterns stripped with regex
+3. **Structure Detection** — Headings identified by casing, title-case, and colon patterns
+4. **Summarization** — TextRank graph algorithm selects top-6 representative sentences
+5. **Keyword Extraction** — TF-IDF scores rank unigrams and bigrams by relevance
+6. **Notes Generation** — Bullets, definitions, and key sentences extracted per page
+7. **Caching** — Results stored as JSON keyed by MD5 hash of content
+
+## 📡 API Reference
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/` | Health check |
+| `POST` | `/api/ingest` | Upload a PDF — returns `lecture_id` and `title` |
+| `GET` | `/api/lecture/:id` | Retrieve processed lecture data (summary, keywords, notes) |
+| `GET` | `/api/lectures` | List all processed lectures |
+
+## ⚡ Getting Started
+
+### Prerequisites
+
+- Python 3.9+
+- Node.js 16+
+
+### 1. Clone the Repository
+
 ```bash
-cd backend
+git clone https://github.com/NssGourav/Naa-Ai.git
+cd Naa-Ai
 ```
 
-2. Install dependencies:
+### 2. Backend Setup (Python)
+
 ```bash
-npm install
+cd backend_py
+pip install -r requirements.txt
+python -m spacy download en_core_web_sm
+python -m uvicorn main:app --reload
 ```
 
-3. Create a `.env` file in the backend directory:
-```env
-API_KEY=your_google_gemini_api_key_here
-```
+The API will be live at `http://localhost:8000`. Visit `http://localhost:8000/docs` for interactive Swagger docs.
 
-4. Start the backend server:
-```bash
-npm start
-```
+### 3. Frontend Setup
 
-The backend will run on `http://localhost:3000`
-
-### Frontend Setup
-
-1. Navigate to the frontend directory:
 ```bash
 cd frontend
-```
-
-2. Install dependencies:
-```bash
 npm install
-```
-
-4. Start the development server:
-```bash
+cp .env.example .env   # Set VITE_API_BASE_URL (defaults to http://localhost:8000/api)
 npm run dev
 ```
 
-The frontend will run on `http://localhost:5173`
+The app will be live at `http://localhost:5173`.
 
-## 🌐 API Endpoints
+## 🧪 Testing
 
-### GET `/`
-Health check endpoint
-- **Response**: `{ "message": "Server is running" }`
+Run the NLP pipeline validation suite:
 
-### POST `/api/content`
-Generate AI response for a prompt
-- **Request Body**:
-  ```json
-  {
-    "question": "Your question here"
-  }
-  ```
-- **Response**:
-  ```json
-  {
-    "result": "AI generated response"
-  }
-  ```
-- **Error Response**:
-  ```json
-  {
-    "error": "Internal server error"
-  }
-  ```
+```bash
+python backend_py/verify_nlp.py
+```
 
-## 🚢 Deployment
+## 🚀 Deployment
 
-### Backend (Render)
-- Backend is deployed at: `https://naa-ai-backend.onrender.com`
-- Set environment variables in Render dashboard:
-  - `API_KEY`: Your Google Gemini API key
+| Component | Platform | Notes |
+|-----------|----------|-------|
+| Frontend | [Vercel](https://vercel.com) | Auto-deploys on push — set `VITE_API_BASE_URL` in environment |
+| Backend | [Render](https://render.com) | Uses `build.sh` for setup — runs with Gunicorn in production |
 
-### Frontend (Vercel)
-- Frontend is configured to connect to the production backend
-- The API URL defaults to: `https://naa-ai-backend.onrender.com/api/content`
-- You can override it using the `VITE_API_URL` environment variable in Vercel
-
-## 📁 Project Structure
+## � Project Structure
 
 ```
 Naa-Ai/
-├── backend/
-│   ├── main.js          # Express server and API routes
-│   ├── package.json     # Backend dependencies
-│   └── .env             # Environment variables (not in git)
 ├── frontend/
-│   ├── index.html       # HTML entry point
-│   ├── main.jsx         # React application
-│   ├── style.css        # Styles
-│   ├── vite.config.js   # Vite configuration
-│   └── package.json     # Frontend dependencies
-└── README.md            
+│   ├── index.html          # Entry point
+│   ├── main.jsx            # React app — upload, tabs, split-screen
+│   ├── style.css           # Full design system (dark theme, animations)
+│   ├── vite.config.js      # Vite configuration
+│   └── .env.example        # Environment template
+├── backend_py/
+│   ├── main.py             # FastAPI server + routes
+│   ├── nlp_pipeline.py     # NLP engine (extract, summarize, keywords, notes)
+│   ├── storage.py          # JSON-based lecture cache with MD5 hashing
+│   ├── verify_nlp.py       # Pipeline validation script
+│   ├── build.sh            # Render deploy script
+│   ├── requirements.txt    # Python dependencies
+│   └── data/               # Cached lecture JSON files
+├── backend/                # Legacy Node.js backend (Gemini AI)
+│   └── main.js             # Express + Google Generative AI
+├── LICENSE                 # MIT License
+└── README.md
 ```
 
-## 🔐 Environment Variables
+## 👨‍💻 Author
 
-### Backend
-- `API_KEY` - Google Gemini API key (required)
-
-### Frontend
-- `VITE_API_URL` - API endpoint URL (optional, defaults to production backend)
-
-## 📝 Usage
-
-1. Start both backend and frontend servers
-2. Open the frontend application in your browser
-3. Type your question in the input field
-4. Press Enter or click Send to get AI-generated responses
-5. Responses are rendered with markdown support
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+**Gourav N S S**
+- GitHub: [@NssGourav](https://github.com/NssGourav)
 
 ## 📄 License
 
-See the [LICENSE](LICENSE) file for details.
-
-## 🔗 Links
-
-- **Backend API**: https://naa-ai-backend.onrender.com
-- **Frontend**: https://naa-ai.vercel.app/
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
 ---
 
-Built with ❤️ using React and Google Gemini AI.
+<p align="center">
+  <sub>Built for the Newton School of Technology </sub>
+</p>
