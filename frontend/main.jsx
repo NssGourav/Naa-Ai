@@ -26,12 +26,21 @@ function App() {
         method: 'POST',
         body: formData
       })
+
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`)
+      }
+
       const data = await response.json()
       if (data.lecture_id) {
-        fetchLectureData(data.lecture_id)
+        await fetchLectureData(data.lecture_id)
+      } else {
+        console.error("No lecture_id returned")
+        setLoading(false)
       }
     } catch (err) {
       console.error("Upload failed", err)
+      alert("Analysis failed. Please check the console for details.")
       setLoading(false)
     }
   }
