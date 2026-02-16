@@ -1,4 +1,5 @@
 import re
+import os
 import spacy
 import pytextrank
 import pdfplumber
@@ -36,8 +37,9 @@ class NLPPipeline:
         return "\n".join(cleaned_lines)
 
     def extract_and_structure(self, pdf_path):
+        filename = os.path.basename(pdf_path).replace('.pdf', '').replace('_', ' ').replace('-', ' ')
         structured_data = {
-            "title": "",
+            "title": filename.title(),
             "pages": [],
             "all_text": ""
         }
@@ -49,10 +51,14 @@ class NLPPipeline:
                     continue
                 
                 cleaned_text = self.clean_text(raw_text)
-                lines = cleaned_text.split('\n')
+                lines = [l.strip() for l in cleaned_text.split('\n') if l.strip()]
                 
-                if not structured_data["title"] and lines:
-                    structured_data["title"] = lines[0]
+                # Improve title detection: look for first multi-word line that isn't just a number
+                if structured_data["title"] == filename.title() and lines:
+                    for line in lines[:3]: # check first 3 lines
+                        if len(line) > 5 and not re.match(r'^\d+$', line):
+                            structured_data["title"] = line
+                            break
 
                 page_data = {
                     "page_num": i + 1,
@@ -76,9 +82,39 @@ class NLPPipeline:
         return list(dict.fromkeys(headings))
 
     def get_summary(self, text, limit_sentences=6):
-        doc = nlp(text[:100000])
-        summary_sentences = [sent.text for sent in doc._.textrank.summary(limit_phrases=15, limit_sentences=limit_sentences)]
-        return summary_sentences
+        try:
+            doc = nlp(text[:100000])
+            summary_sentences = [sent.text.strip() for sent in doc._.textrank.summary(limit_phrases=15, limit_sentences=limit_sentences)]
+            
+            # Detect links to include at the bottom
+            links = list(set(re.findall(r'https?://[^\s<>"]+|www\.[^\s<>"]+', text)))
+            
+            markdown_summary = "### Key Takeaways\n\n"
+            for sent in summary_sentences:
+                # Remove links from the takeaway text for a cleaner look
+                clean_sent = re.sub(r'https?://[^\s<>"]+|www\.[^\s<>"]+', '', sent).strip()
+                # Remove trailing noise like "Sheet link:" or "DIY:"
+                clean_sent = re.sub(r'(Sheet link:|DIY:|Context:|Note:)$', '', clean_sent, flags=re.IGNORECASE).strip()
+                
+                if len(clean_sent) > 20:
+                    # Logic to handle points that might have been combined (e.g. split on bullet characters)
+                    # This helps when the text extractor combines lines.
+                    sub_points = re.split(r'\s+[\u2022\u25cf\*\-]\s+', clean_sent)
+                    for sub_p in sub_points:
+                        sub_p = sub_p.strip()
+                        if len(sub_p) > 10:
+                            # Final cleaning of non-ASCII bullets at start
+                            sub_p = re.sub(r'^[\u2022\u25cf\*\-\s]+', '', sub_p)
+                            markdown_summary += f"- {sub_p}\n"
+            
+            if links:
+                markdown_summary += "\n\n### 🔗 Helpful Links\n\n"
+                for link in links[:5]:
+                    markdown_summary += f"- [{link}]({link if link.startswith('http') else 'https://' + link})\n"
+                    
+            return markdown_summary
+        except Exception as e:
+            return f"Summary generation failed: {str(e)}"
 
     def get_keywords(self, text, top_n=12):
         vectorizer = TfidfVectorizer(stop_words='english', ngram_range=(1,2))

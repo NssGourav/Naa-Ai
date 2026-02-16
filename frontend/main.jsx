@@ -7,9 +7,32 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api
 
 function App() {
   const [lectureData, setLectureData] = useState(null)
-  const [activeTab, setActiveTab] = useState('summary')
+  const [activeTab, setActiveTab] = useState('notes')
   const [loading, setLoading] = useState(false)
   const [pdfUrl, setPdfUrl] = useState(null)
+  const [panelWidth, setPanelWidth] = useState(50) // percentage
+  const [isResizing, setIsResizing] = useState(false)
+
+  const startResizing = () => setIsResizing(true)
+  const stopResizing = () => setIsResizing(false)
+
+  const resize = (e) => {
+    if (isResizing) {
+      const newWidth = (e.clientX / window.innerWidth) * 100
+      if (newWidth > 20 && newWidth < 80) {
+        setPanelWidth(newWidth)
+      }
+    }
+  }
+
+  useEffect(() => {
+    window.addEventListener('mousemove', resize)
+    window.addEventListener('mouseup', stopResizing)
+    return () => {
+      window.removeEventListener('mousemove', resize)
+      window.removeEventListener('mouseup', stopResizing)
+    }
+  }, [isResizing])
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0]
@@ -66,13 +89,13 @@ function App() {
   }, [lectureData, activeTab])
 
   return (
-    <div className="app-container">
-      <div className="pdf-viewer">
+    <div className={`app-container ${isResizing ? 'is-resizing' : ''}`}>
+      <div className="pdf-viewer" style={{ width: `${panelWidth}%`, flex: 'none' }}>
         {pdfUrl ? (
           <iframe src={pdfUrl} title="Lecture PDF" />
         ) : (
           <div className="upload-box" onClick={() => document.getElementById('fileInput').click()}>
-            <p>📁 Click to upload NS  T Lecture PDF</p>
+            <p>📁 Click to upload NST Lecture PDF</p>
             <input
               id="fileInput"
               type="file"
@@ -90,8 +113,9 @@ function App() {
         )}
       </div>
 
+      <div className="resizer" onMouseDown={startResizing} />
 
-      <div className="analysis-panel">
+      <div className="analysis-panel" style={{ width: `${100 - panelWidth}%`, flex: 'none' }}>
         <div className="panel-header">
           <h1>{lectureData ? lectureData.title : 'Lecture Intelligence'}</h1>
           {lectureData && <span className="badge">Analyzed</span>}
@@ -100,7 +124,7 @@ function App() {
         {lectureData ? (
           <>
             <div className="tabs">
-              {['summary', 'notes'].map(tab => (
+              {['notes', 'summary'].map(tab => (
                 <div
                   key={tab}
                   className={`tab ${activeTab === tab ? 'active' : ''}`}
@@ -113,10 +137,9 @@ function App() {
 
             <div className="tab-content fade-in">
               {activeTab === 'summary' && (
-                <div className="summary-view">
-                  {lectureData.summary.map((s, i) => (
-                    <div key={i} className="summary-item">{s}</div>
-                  ))}
+                <div className="summary-view markdown-body">
+                  <ReactMarkdown>{lectureData.summary}</ReactMarkdown>
+
                   <div className="keywords-box">
                     <h3>Focus Keywords</h3>
                     <div className="keyword-tags">
@@ -130,11 +153,16 @@ function App() {
                 <div className="notes-view">
                   {lectureData.notes.map((n, i) => (
                     <div key={i} className="note-card">
-                      <h3>Page {n.page}</h3>
+                      <div className="note-card-header">
+                        <span className="page-badge">Page {n.page}</span>
+                      </div>
                       <div className="note-groups">
                         {Array.from(new Set(n.content.map(p => p.heading))).map(heading => (
                           <div key={heading} className="note-group">
-                            <h4>{heading}</h4>
+                            <div className="section-divider">
+                              <span className="section-label">SECTION</span>
+                              <h4>{heading}</h4>
+                            </div>
                             <ul>
                               {n.content.filter(p => p.heading === heading).map((p, j) => (
                                 <li key={j}>{p.point}</li>
@@ -160,6 +188,5 @@ function App() {
     </div>
   )
 }
-
 const root = createRoot(document.getElementById('app'))
 root.render(<App />)
