@@ -92,17 +92,18 @@ class NLPPipeline:
 
     def generate_exam_notes(self, structured_data):
         notes = []
+        # Support more bullet types and numbered lists
         bullet_regex = r'^(\u25cf|\u25cb|\u25a0|\u25b8|\u25b9|\u27a2|\u2022|[\-\*\>\u27a4])|^\(?\d+[\.\)]|^\(?[a-zA-Z][\.\)]'
-        context_keywords = ["why you need this", "context:", "note:", "definition:", "key concept:"]
+        context_keywords = ["why", "context:", "note:", "definition:", "key concept:", "important:", "remember:", "note that"]
         
         for page in structured_data["pages"]:
             page_points = []
             lines = page["content"].split('\n')
-            current_heading = "General Points"
+            current_heading = "Key Discussion"
             
             for line in lines:
                 line_clean = line.strip()
-                if not line_clean:
+                if not line_clean or len(line_clean) < 5:
                     continue
                     
                 if line_clean in page["headings"]:
@@ -111,11 +112,25 @@ class NLPPipeline:
                     
                 is_bullet = re.match(bullet_regex, line_clean)
                 has_context = any(kw in line_clean.lower() for kw in context_keywords)
-                has_definition = any(x in line_clean.lower() for x in [" refers to ", " is defined as ", " consists of "])
+                has_definition = any(x in line_clean.lower() for x in [" refers to ", " is defined as ", " consists of ", " involves ", " means "])
                 
-                if is_bullet or has_context or has_definition:
+                # Check if it's an important sentence (lengthy but not a paragraph)
+                is_significant = 20 < len(line_clean) < 200 and line_clean[0].isupper() and line_clean.endswith(('.', '?', ':'))
+
+                if is_bullet or has_context or has_definition or is_significant:
                     page_points.append({"heading": current_heading, "point": line_clean})
             
+            # --- Fallback Logic ---
+            # If no points found but page has text, extract top 2 sentences as summary points
+            if not page_points and len(page["content"].strip()) > 50:
+                try:
+                    doc = nlp(page["content"][:2000])
+                    summary_sents = [sent.text.strip() for sent in doc._.textrank.summary(limit_sentences=2)]
+                    for sent in summary_sents:
+                        page_points.append({"heading": "Summary Point", "point": sent})
+                except Exception:
+                    pass
+
             if page_points:
                 notes.append({
                     "page": page["page_num"],
